@@ -10,6 +10,7 @@ This codes implement quantum circuits for hyperbolic partial differential equati
 |  Software  |  Version  |
 | :----: | :----: |
 |  python  |  3.10  |
+|  tqdm  |  4.66  |
 |  qiskit  |  1.0  |
 | qiskit-aer | 0.13 |
  

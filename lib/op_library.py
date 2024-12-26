@@ -309,7 +309,7 @@ class WaveEquationEvolution(OperatorList):
     def h(self):
         return self._h
 
-    def __init__(self, num_qubits_x: int, num_qubits_y: Optional[int]=None, num_qubits_z: Optional[int]=None, \
+    def __init__(self, num_qubits_x: int, num_qubits_y: Optional[int]=None, \
                 dim: int=1, diff_type: str='central', h: float=1.0, periodic: bool=False):
 
         self._dim = dim
@@ -325,12 +325,6 @@ class WaveEquationEvolution(OperatorList):
             self._num_qubits_y = num_qubits_y if num_qubits_y is not None else num_qubits_x
             self._num_qubits = self._num_qubits_x + self._num_qubits_y + 1
         
-        elif dim == 3:
-            self._num_qubits_x = num_qubits_x
-            self._num_qubits_y = num_qubits_y if num_qubits_y is not None else num_qubits_x
-            self._num_qubits_z = num_qubits_x if num_qubits_z is not None else num_qubits_x
-            self._num_qubits = self._num_qubits_x + self._num_qubits_y + self._num_qubits_z + 2
-
         else:
             raise NotImplementedError()
         
@@ -489,20 +483,6 @@ class WaveEquationEvolution(OperatorList):
                     else:
                         coeffs['p' + op] -= coeff
         
-        elif dim == 3:
-            if diff_type == 'central':
-
-                diff_op_x = DifferentialOperator1d(self._num_qubits_x, is_pauli=False, diff_type='central', h=h)
-                diff_op_y = DifferentialOperator1d(self._num_qubits_y, is_pauli=False, diff_type='central', h=h)
-                diff_op_z = DifferentialOperator1d(self._num_qubits_z, is_pauli=False, diff_type='central', h=h)
-
-                diff_op_list = [op + 'I'*self._num_qubits_y + 'I'*self._num_qubits_z for op in diff_op_x._op_list] \
-                            + ['I'*self._num_qubits_x + op for op in diff_op_y._op_list + 'I'*num_qubits_z] \
-                            + ['I'*self._num_qubits_x + 'I'*num_qubits_y + op for op in diff_op_z._op_list]
-                diff_op_coeffs = diff_op_x._coeffs
-                
-                raise NotImplementedError()
-
         self._op_list = [op_list[i] for i in np.argsort(op_list)]
         self._coeffs = [coeffs[op] for op in np.sort(op_list)]
 
@@ -525,9 +505,9 @@ class AdvectionEquationEvolution(OperatorList):
     def h(self):
         return self._h
     
-    def __init__(self, num_qubits_x: int, num_qubits_y: Optional[int]=None, num_qubits_z: Optional[int]=None, \
+    def __init__(self, num_qubits_x: int, num_qubits_y: Optional[int]=None, \
                 dim: int=1, diff_type: str='central', h: float=1.0, periodic: bool=False,  \
-                vx: float=1.0, vy: Optional[float]=None, vz: Optional[float]=None):
+                vx: float=1.0, vy: Optional[float]=None):
 
         self._dim = dim
         self._h = h
@@ -545,15 +525,6 @@ class AdvectionEquationEvolution(OperatorList):
             self._vx = vx
             self._vy = vy if vy is not None else 0.0
         
-        elif dim == 3:
-            self._num_qubits_x = num_qubits_x
-            self._num_qubits_y = num_qubits_y if num_qubits_y is not None else num_qubits_x
-            self._num_qubits_z = num_qubits_x if num_qubits_z is not None else num_qubits_x
-            self._num_qubits = self._num_qubits_x + self._num_qubits_y + self._num_qubits_z
-            self._vx = vx
-            self._vy = vy if vy is not None else 0.0
-            self._vz = vz if vz is not None else 0.0
-
         else:
             raise NotImplementedError()
         
@@ -596,34 +567,6 @@ class AdvectionEquationEvolution(OperatorList):
                         coeffs['I'*self._num_qubits_x + op] = -1j * self._vy * coeff
                     else:
                         coeffs['I'*self._num_qubits_x + op] += -1j * self._vy * coeff
-        
-        elif dim == 3:
-            if diff_type == 'central':
-
-                diff_op_x = DifferentialOperator1d(self._num_qubits_x, is_pauli=False, diff_type='central', h=h, periodic=periodic)
-                diff_op_y = DifferentialOperator1d(self._num_qubits_y, is_pauli=False, diff_type='central', h=h, periodic=periodic)
-                diff_op_z = DifferentialOperator1d(self._num_qubits_z, is_pauli=False, diff_type='central', h=h, periodic=periodic)
-                
-                for op, coeff, in zip(diff_op_x._op_list, diff_op_x._coeffs):
-                    if op + 'I'*self._num_qubits_y + 'I'*self._num_qubits_z not in op_list:
-                        op_list.append(op + 'I'*self._num_qubits_y + 'I'*self._num_qubits_z)
-                        coeffs[op + 'I'*self._num_qubits_y + 'I'*self._num_qubits_z] = -1j * self._vx * coeff
-                    else:
-                        coeffs[op + 'I'*self._num_qubits_y + 'I'*self._num_qubits_z] += -1j * self._vx * coeff
-                
-                for op, coeff, in zip(diff_op_y._op_list, diff_op_y._coeffs):
-                    if 'I'*self._num_qubits_x + op + 'I'*self._num_qubits_z not in op_list:
-                        op_list.append('I'*self._num_qubits_x + op + 'I'*self._num_qubits_z)
-                        coeffs['I'*self._num_qubits_x + op + 'I'*self._num_qubits_z] = -1j * self._vy * coeff
-                    else:
-                        coeffs['I'*self._num_qubits_x + op + 'I'*self._num_qubits_z] += -1j * self._vy * coeff
-                
-                for op, coeff, in zip(diff_op_z._op_list, diff_op_z._coeffs):
-                    if 'I'*self._num_qubits_x + 'I'*self._num_qubits_y + op not in op_list:
-                        op_list.append('I'*self._num_qubits_x + 'I'*self._num_qubits_y + op)
-                        coeffs['I'*self._num_qubits_x + 'I'*self._num_qubits_y + op] = -1j * self._vz * coeff
-                    else:
-                        coeffs['I'*self._num_qubits_x + 'I'*self._num_qubits_y + op] += -1j * self._vz * coeff
-            
+                    
         self._op_list = [op_list[i] for i in np.argsort(op_list)]
         self._coeffs = [coeffs[op] for op in np.sort(op_list)]
